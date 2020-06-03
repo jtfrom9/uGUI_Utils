@@ -7,12 +7,104 @@ using UnityEngine.EventSystems;
 using UniRx;
 using UniRx.Triggers;
 
+public enum InputEventType
+{
+    Begin = 1,
+    Move = 2,
+    End = 4,
+    Other = 8
+}
+
+public interface IInputEvent
+{
+    InputEventType Type { get; }
+    Vector2 Position { get; }
+    bool Ignored { get; }
+}
+
+public interface IInput
+{
+    bool IsEnable { get; }
+    IInputEvent Current { get; }
+}
+
+public class UnityTouchInput : IInput
+{
+    class UnityInputEvent : IInputEvent
+    {
+        private Touch touch;
+
+        public InputEventType Type
+        {
+            get
+            {
+                switch (touch.phase)
+                {
+                    case TouchPhase.Began:
+                        return InputEventType.Begin;
+                    case TouchPhase.Moved:
+                        return InputEventType.Move;
+                    case TouchPhase.Ended:
+                        return InputEventType.End;
+                    default:
+                        return InputEventType.Other;
+                }
+            }
+        }
+
+        public Vector2 Position { get => touch.position; }
+
+        public bool Ignored { get => EventSystem.current.IsPointerOverGameObject(touch.fingerId); }
+
+        public UnityInputEvent(Touch touch)
+        {
+            this.touch = touch;
+        }
+    }
+
+    public bool IsEnable { get => Input.touchCount > 0; }
+    public IInputEvent Current { get => new UnityInputEvent(Input.GetTouch(0)); }
+}
+
+public class UnityMouseInput : IInput
+{
+    class UnityMouseInputEvent : IInputEvent
+    {
+        InputEventType type;
+        Vector2 position;
+        public InputEventType Type { get => type; }
+        public Vector2 Position { get => position; }
+        public bool Ignored { get => EventSystem.current.IsPointerOverGameObject(); }
+        public UnityMouseInputEvent(int id)
+        {
+            if (Input.GetMouseButtonDown(id))
+                type = InputEventType.Begin;
+            else if (Input.GetMouseButtonUp(id))
+                type = InputEventType.End;
+            else
+                type = InputEventType.Move;
+            position = Input.mousePosition;
+        }
+    }
+    private int id;
+    public bool IsEnable { get => true; }
+    public IInputEvent Current { get => new UnityMouseInputEvent(id); }
+
+    public UnityMouseInput(int id)
+    {
+        this.id = id;
+    }
+}
+
+
 public class Swipe : MonoBehaviour
 {
     public Toggle KeepLatestToggle;
     public Button DebugButton;
     public Button ClearButton;
     public ScrollableTextPanelView logPanel;
+
+    IInput input;
 
     void log(string msg)
     {
@@ -21,39 +113,45 @@ public class Swipe : MonoBehaviour
 
     void Start()
     {
+#if UNITY_EDITOR
+        input = new UnityMouseInput(0);
+#elif UNITY_ANDROID || UNITY_IOS
+        input = new UnityTouchInput();
+#endif
+
         bool begin = false;
         var beginPos = Vector2.zero;
         var beginTime = DateTime.Now;
         var points = 0;
 
         this.UpdateAsObservable()
-            .Where(_ => Input.touchCount > 0)
-            .Select(_ => Input.GetTouch(0))
-            .Where(touch => touch.phase == TouchPhase.Began)
-            .Where(touch => !EventSystem.current.IsPointerOverGameObject(touch.fingerId)) // ignore on UI
-            .Subscribe(touch => {
+            .Where(_ => input.IsEnable)
+            .Select(_ => input.Current)
+            .Where(e => e.Type == InputEventType.Begin)
+            .Where(e => !e.Ignored) // ignore on UI
+            .Subscribe(e => {
                 begin = true;
-                beginPos = touch.position;
+                beginPos = e.Position;
                 beginTime = DateTime.Now;
-                log($"<color=red>[0] {beginTime} {touch.phase}: {touch.position}</color>");
+                log($"<color=red>[0] {beginTime} {e.Type}: {e.Position}</color>");
                 points = 1;
             });
 
         this.UpdateAsObservable()
-            .Where(_ => begin && Input.touchCount > 0)
-            .Select(_ => Input.GetTouch(0))
-            .Where(touch => (touch.phase != TouchPhase.Began))
-            .Subscribe(touch =>
+            .Where(_ => begin && input.IsEnable)
+            .Select(_ => input.Current)
+            .Where(e => (e.Type != InputEventType.Begin))
+            .Subscribe(e =>
             {
-                if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+                if (e.Type == InputEventType.End || e.Type == InputEventType.Other)
                 {
                     begin = false; // clear flag
                 }
-                log($"[{points}] {DateTime.Now} {touch.phase}: {touch.position}");
+                log($"[{points}] {DateTime.Now} {e.Type}: {e.Position}");
                 points++;
-                if (touch.phase == TouchPhase.Ended)
+                if (e.Type == InputEventType.End)
                 {
-                    var vec = touch.position - beginPos;
+                    var vec = e.Position - beginPos;
                     log($"<color=red>Swpie: vec={vec}, {points} points, {(DateTime.Now - beginTime).Milliseconds} ms</color>");
                 }
             });
