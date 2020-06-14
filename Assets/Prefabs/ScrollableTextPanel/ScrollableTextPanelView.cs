@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System.Text;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,6 +13,7 @@ public class ScrollableTextPanelView : MonoBehaviour
     ScrollRect scrollRect;
     Scrollbar scrollbar;
     Text text;
+    StringBuilder stringBuilder = new StringBuilder(4096);
 
     void Awake()
     {
@@ -38,12 +40,16 @@ public class ScrollableTextPanelView : MonoBehaviour
 
     public void WriteLine(string msg) 
     {
-        text.text += $"{msg}\n";
+        // text.text += $"{msg}\n";
+        stringBuilder.Append(msg);
+        stringBuilder.Append("\n");
+        text.text = stringBuilder.ToString();
     }
 
     public void Clear()
     {
         text.text = "";
+        stringBuilder.Clear();
         text.SetAllDirty();
     }
 }
