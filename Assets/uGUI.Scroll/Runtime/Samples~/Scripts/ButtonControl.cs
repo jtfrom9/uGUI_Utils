@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UniRx;
+using uGUI.Scroll;
 
 public class ButtonControl : MonoBehaviour
 {
@@ -17,7 +18,7 @@ public class ButtonControl : MonoBehaviour
         button.OnClickAsObservable().Subscribe(_ => {
             var go = Instantiate(itemPrefab);
             go.transform.SetParent(listPanel, false);
-            go.GetComponent<ListItem>()?.Initialize($"item {count}", verticalScrollRectController);
+            go.GetComponent<VerticalScrollRectContentController>()?.Initialize($"item {count}", verticalScrollRectController);
             count++;
         }).AddTo(this);
     }
