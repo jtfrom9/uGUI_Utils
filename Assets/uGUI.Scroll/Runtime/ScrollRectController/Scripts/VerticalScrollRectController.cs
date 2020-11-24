@@ -12,6 +12,10 @@ namespace uGUI.Scroll
         void Start()
         {
             scrollRect = GetComponent<ScrollRect>();
+            // scrollRect.onValueChanged.AddListener((pos) => {
+            //     var anchorPos = scrollRect.content.anchoredPosition;
+            //     Debug.Log($"scrollRect: {pos}, content.anchoredPosision: {anchorPos}");
+            // });
         }
 
         public void Select(RectTransform selectedRect)
@@ -21,10 +25,13 @@ namespace uGUI.Scroll
 
             var refY = -selectedRect.offsetMax.y;
             var visible = (contentPosY <= refY && (refY + selectedRect.rect.height) <= contentPosY + viewPortHeight);
+            // Debug.Log($"contentPosY({contentPosY}) <= refY({refY}) is {contentPosY <= refY}");
+            // Debug.Log($"refY({refY}) + rect.height({selectedRect.rect.height}) <= contentPosY({contentPosY}) + viewPortHeight({viewPortHeight}) is {(refY + selectedRect.rect.height) <= contentPosY + viewPortHeight}");
 
             if (!visible)
             {
                 var newY = refY + selectedRect.rect.height - viewPortHeight;
+                // Debug.Log($"newY = refY({refY}) + rect.height({selectedRect.rect.height}) - viewPortHeight({viewPortHeight}) = {newY}");
                 scrollRect.content.anchoredPosition = new Vector2
                 {
                     x = scrollRect.content.anchoredPosition.x,
