@@ -11,6 +11,7 @@ namespace uGUI.Scroll
         void AddTrigger(EventTriggerType eventID, System.Action callback);
         bool Selected { get; }
         RectTransform rectTransform { get; }
+        GameObject gameObject { get; }
     }
 
     [RequireComponent(typeof(EventTrigger))]

@@ -15,7 +15,7 @@ public class ScrollRectContent : MonoBehaviour
     {
         var go = Instantiate(itemPrefab);
         go.name = $"item {count}";
-        var content = go.GetComponent<VerticalScrollRectContent>();
+        var content = go.GetComponent<IScrollRectContent>();
         content.AddTrigger(EventTriggerType.Select, () =>
         {
             Debug.Log($"selected. {content.gameObject.name}");
