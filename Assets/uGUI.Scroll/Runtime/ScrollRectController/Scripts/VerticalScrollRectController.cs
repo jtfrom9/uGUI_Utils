@@ -5,9 +5,23 @@ using UnityEngine.UI;
 
 namespace uGUI.Scroll
 {
-    public class VerticalScrollRectController : MonoBehaviour
+    public interface IScrollRectController
     {
-        ScrollRect scrollRect;
+        bool IsSelected(IScrollRectContent content);
+        IScrollRectContent SelectedContent { get; }
+        void AddContent(IScrollRectContent content);
+        void RemoveContent();
+    }
+
+    public static class ScrollRectControllerExtension
+    {
+        public static bool AnySelected(this IScrollRectController c) => c.SelectedContent != null;
+    }
+
+    public class VerticalScrollRectController : MonoBehaviour, IScrollRectController
+    {
+        ScrollRect scrollRect = null;
+        IScrollRectContent selectedContent = null;
 
         void Start()
         {
@@ -18,8 +32,9 @@ namespace uGUI.Scroll
             // });
         }
 
-        public void Select(RectTransform selectedRect)
+        internal void Select(IScrollRectContent selectedContent)
         {
+            var selectedRect = selectedContent.rectTransform;
             var viewPortHeight = scrollRect.viewport.rect.height;
             var contentPosY = scrollRect.content.anchoredPosition.y;
 
@@ -38,6 +53,37 @@ namespace uGUI.Scroll
                     y = (newY < 0) ? refY : newY
                 };
             }
+            this.selectedContent = selectedContent;
         }
+
+        internal void Deselect()
+        {
+            this.selectedContent = null;
+        }
+
+        public void AddContent(IScrollRectContent content)
+        {
+            var contentHolder = scrollRect.content.transform;
+            content.rectTransform.transform.SetParent(contentHolder, false);
+        }
+
+        public void RemoveContent()
+        {
+            if (selectedContent != null)
+            {
+                var go = selectedContent.rectTransform.gameObject;
+                go.transform.SetParent(null);
+                Destroy(go);
+
+                selectedContent = null;
+            }
+        }
+
+        public bool IsSelected(IScrollRectContent content)
+        {
+            return (this.selectedContent == content);
+        }
+
+        public IScrollRectContent SelectedContent { get => this.selectedContent; }
     }
 }
